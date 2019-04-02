@@ -1,11 +1,11 @@
-from flask import Flask
+from flask import Flask, jsonify, make_response
 from flask_restful import Api, Resource, reqparse, abort
-
+from flask_httpauth import HTTPBasicAuth
 
 
 app = Flask(__name__)
 api = Api(app)
-
+auth = HTTPBasicAuth()
 
 USERS = {
     '1':{
@@ -28,8 +28,16 @@ USERS = {
     } 
 }
 
-# 
-# parser = reqparse.RequestParser()
+
+@auth.get_password
+def get_password(username):
+    if username == 'azeem':
+        return '12345'
+    return None
+
+@auth.error_handler
+def unauthorized():
+    return make_response(jsonify({'message': 'Unauthorized access'}), 403)
 
 def user_exists(user_id):
     if user_id not in USERS:
@@ -37,6 +45,7 @@ def user_exists(user_id):
     return True
 
 class UserListApi(Resource):
+    decorators = [auth.login_required]
 
     def __init__(self):
         self.reqparse = reqparse.RequestParser()
@@ -57,8 +66,10 @@ class UserListApi(Resource):
     def post(self):
         args = self.reqparse.parse_args()
         for u_id in range(1, len(USERS)):
-            if u_id in USERS:
+            if str(u_id) in USERS:
                 u_id +=1
+            else:
+                break
 
         user = {
            u_id: {
@@ -72,6 +83,7 @@ class UserListApi(Resource):
         return user
 
 class UserApi(Resource):
+    decorators = [auth.login_required]
 
     def __init__(self):
         self.reqparse = reqparse.RequestParser()
